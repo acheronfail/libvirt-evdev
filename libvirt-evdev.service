@@ -3,7 +3,7 @@ Description=Libvirt evdev input service
 Before=libvirtd.service
 
 [Service]
-ExecStart=/usr/local/bin/libvirt-evdev.py
+ExecStart=/opt/usb-libvirt-evdev-hotplug/libvirt-evdev.py
 Environment=PYTHONUNBUFFERED=1
 Restart=on-failure
 Type=notify

@@ -12,12 +12,14 @@ import pyudev
 import toml
 import pickle
 
-async def screen_input_switch(owner):
-    for screen in config['screens']:
-        for source in screen['sources']:
-            if source['owner'] == owner:
-                print("Screen input switch: {0} {1}".format(screen['name'], source['name']))
-                await asyncio.create_subprocess_exec("/usr/bin/ddccontrol", "-r", screen['address'], "-w", source['id'], screen['dev'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+CONFIG_FILE_PATH = "/opt/usb-libvirt-evdev-hotplug/libvirt-evdev.toml"
+
+# async def screen_input_switch(owner):
+#     for screen in config['screens']:
+#         for source in screen['sources']:
+#             if source['owner'] == owner:
+#                 print("Screen input switch: {0} {1}".format(screen['name'], source['name']))
+#                 await asyncio.create_subprocess_exec("/usr/bin/ddccontrol", "-r", screen['address'], "-w", source['id'], screen['dev'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 async def replicate(source_device):
     global current_mode
@@ -33,8 +35,8 @@ async def replicate(source_device):
                         "host": "guest",
                         "guest": "host",
                     }[mode]
-
-                    await screen_input_switch(current_mode)
+                    print("Switching mode to: {}".format(current_mode))
+#                    await screen_input_switch(current_mode)
 
                 mode = "host"
             else:
@@ -67,6 +69,9 @@ def action_input(action, device):
 def action_usb(action, device):
     global current_mode
 
+    if not config['usb_switch']:
+        return
+
     if device.get(config['usb_switch']['property_name']) == config['usb_switch']['property_value']:
         if action == 'add':
             asyncio.run_coroutine_threadsafe(screen_input_switch(current_mode), loop)
@@ -77,11 +82,11 @@ def action_usb(action, device):
 if __name__ == '__main__':
 
     try:
-        config = toml.load('/usr/local/etc/libvirt-evdev.toml')
+        config = toml.load(CONFIG_FILE_PATH)
     except:
         print("Reading config file failed.")
         exit(0)
-    
+
     if not 'inputs' in config:
         print("No [inputs] section in config file.")
         exit(0)
@@ -111,7 +116,6 @@ if __name__ == '__main__':
 
     if not capabilities:
         exit(0)
-    
 
     # create host devices
     host_devices = {
@@ -148,6 +152,7 @@ if __name__ == '__main__':
 
     # create symlinks
     for (device, path) in zip(virtual_devices, virtual_device_paths):
+        print("linking: {} -> {}".format(device.device, path))
         if os.path.exists(path):
             subprocess.run(["unlink", "--", path])
         subprocess.run(["ln", "-s", device.device, path])
@@ -171,9 +176,8 @@ if __name__ == '__main__':
     observer_usb.start()
 
     # notify systemd that start is done
-    sd.notify(sd.Notification.READY)
+    sd.notify('READY=1')
 
     loop = asyncio.get_event_loop()
     loop.run_forever()
 
-    

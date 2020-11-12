@@ -1,3 +1,21 @@
+!!! patch notes
+
+To install:
+
+```bash
+git clone git@github.com:acheronfail/libvirt-evdev.git /opt/usb-libvirt-evdev-hotplug
+cp /opt/usb-libvirt-evdev-hotplug/libvirt-evdev.service /etc/systemd/system/
+systemctl enable libvirt-evdev.service
+```
+
+Reboot, and you should be good.
+
+If the devices aren't restored automatically after a reboot, running this should do the trick:
+
+```bash
+sudo rm /dev/input/by-id/{host,guest}-* && sudo -v && sleep 1 && sudo systemctl restart libvirt-evdev && sudo systemctl restart libvirtd
+```
+
 # libvirt-evdev
 The purpose of libvirt-evdev service is to provide means to use libvirt evdev passthrough for hot pluggable input devices.
 ## Example configuration
